@@ -1,5 +1,4 @@
 #include <math.h>
-
 #include "rand.h"
 #include "distributions.h"
 
@@ -25,6 +24,7 @@ double uniform(double a, double b)
 
 int bernoulli(double p)
 {
+	if (p < 0.0 || p > 1.0) return -1;
 	return (standard_uniform() <= p);
 }
 
@@ -34,6 +34,7 @@ int bernoulli(double p)
 
 int binomial(int n, double p)
 {
+	if (p < 0.0 || p > 1.0 || n < 0) return -1;
 	int X = 0;
 	for (int i = 0; i < n; ++i)
 		X += bernoulli(p);
@@ -63,17 +64,17 @@ int poisson(double lambda)
 
 double exponential(double lambda)
 {
-	/* Тут мы можем использовать лишь log(u) вместо
+	/* Тут мы можем использовать log(u) вместо
 	*  log(1 - u), поскольку 1 - u и u имеют одно и
-	*  то же распределение Uniform(0, 1)
+	*  то же распределение - Uniform(0, 1)
 	*/
 	return -log(standard_uniform()) / lambda;
 }
 
 // TODO:
 // 1. Лоу Кельтон + продолжение теории по терверу	(x)
-// 2. закончить с дискретными						(v)
-// 3. начать непрерывные							(v)
-// 4. проверка по критерию Пирсона					(x)
-// 5. просмотреть лекцию							(x)
-// 6. конспект тервера								(x)
+// 2. закончить с дискретными				(v)
+// 3. начать непрерывные				(v)
+// 4. проверка по критерию Пирсона			(x)
+// 5. просмотреть лекцию				(x)
+// 6. конспект тервера					(x)

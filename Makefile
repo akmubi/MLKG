@@ -10,13 +10,14 @@ FILENAME := $(FILENAME).exe
 RUNFILE := $(FILENAME)
 else
 RUNFILE := ./$(FILENAME)
+CLIBS := -lm
 endif
 
 SOURCES := $(wildcard *.c)
 OBJECTS := $(SOURCES:.c=.o)
 
 all: $(OBJECTS)
-	$(CC) $^ -o  $(FILENAME)
+	$(CC) $^ -o  $(FILENAME) $(CLIBS)
 
 run:
 	$(RUNFILE)
