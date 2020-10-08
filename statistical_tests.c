@@ -42,18 +42,18 @@ double calculate_test_statistics_binomial(int n, int N, double p)
 		frequency[count]++;
 	}
 
-	double *probs = (double *)malloc((N + 1) * sizeof(double));
+	double *threoretical = (double *)malloc((N + 1) * sizeof(double));
 	for (int i = 0; i <= N; ++i)
-		probs[i] = combination(N, i) * pow(p, i) * pow(1 - p, N - i);
+	{
+		double p = combination(N, i) * pow(p, i) * pow(1 - p, N - i);
+		threoretical[i] = n * p;
+	}
 
 	double k = 0;
 	for (int i = 0; i <= N; ++i)
-	{
-		double threoretical = n * probs[i]; 
-		k += (frequency[i] - threoretical) * (frequency[i] - threoretical) / threoretical;
-	}
+		k += (frequency[i] - threoretical[i]) * (frequency[i] - threoretical[i]) / threoretical[i];
 
-	free(probs);
+	free(threoretical);
 	free(frequency);
 	return k;
 }
