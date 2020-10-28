@@ -1,80 +1,54 @@
 #include <math.h>
+#include <malloc.h>
+
 #include "rand.h"
 #include "distributions.h"
 
-
 /*
-*	Равномерное распределение
+	Генератор случайных величин с непрерывным равномерным распределением
+	в диапазоне [a, b]
+	Вход:	rand_vars - выходной массив случайных величин
+		count - размер массива
+		a - параметр положения
+		b - параметр масштаба
+	Выход:
+		rand_vars - выходной массив случайных величин 
 */
-
-double standard_uniform()
+void uniform(double *rand_vars, unsigned int count, double a, double b)
 {
-	return mrand() * INV_RAND_MAX;
-}
-
-double uniform(double a, double b)
-{
-	return a + (b - a) * standard_uniform();
-}
-
-
-/*
-*	Распределение Бернулли
-*/
-
-int bernoulli(double p)
-{
-	if (p < 0.0 || p > 1.0) return -1;
-	return (standard_uniform() <= p);
-}
-
-/*
-*	Биномиальное распределение
-*/
-
-int binomial(int n, double p)
-{
-	if (p < 0.0 || p > 1.0 || n < 0) return -1;
-	int X = 0;
-	for (int i = 0; i < n; ++i)
-		X += bernoulli(p);
-	return X;
-}
-
-
-/*
-*	Распределение Пуассона
-*/
-
-int poisson(double lambda)
-{
-	double U = standard_uniform();
 	
-	int i = 0;
-	double p = exp(-lambda);
-	double F = p;
-
-	for (; U >= F; ++i)
+	for (int i = 0; i < count; ++i)
 	{
-		p = lambda * p / (i + 1);
-		F += p;
+		double u = mrand() * INV_RAND_MAX;
+		rand_vars[i] = a + (b - a) * u;
 	}
-	return i;
 }
 
-double exponential(double lambda)
+/*
+	Генератор Пуассоновской случайной величины
+	Вход:	rand_vars - выходной массив случайных величин
+		count - размер массива
+		lambda - интенсивность (мат. ожидание) случайной величины
+	Выход:
+		rand_vars - выходной массив случайных величин 
+*/
+void poisson(unsigned int *rand_vars, int count, double lambda)
 {
-	/* Тут мы можем использовать log(u) вместо
-	*  log(1 - u), поскольку 1 - u и u имеют одно и
-	*  то же распределение - Uniform(0, 1)
-	*/
-	return -log(standard_uniform()) / lambda;
-}
+	for (int i = 0; i < count; ++i)
+	{
+		unsigned int j = 0;
+		double p = exp(-lambda);
+		double F = p;
+		
+		// U ~ Uniform(0, 1)
+		double U = 0.0;
+		uniform(&U, 1, 0, 1);
 
-// TODO:
-// 1. Лоу Кельтон + продолжение теории по терверу	(x)
-// 2. закончить с дискретными				(v)
-// 3. начать непрерывные				(v)
-// 4. проверка по критерию Пирсона			(x)
-// 5. просмотреть лекцию				(x)
-// 6. конспект тервера					(x)
+		for (; U >= F; ++j)
+		{
+			p = lambda * p / (j + 1);
+			F += p;
+		}
+		rand_vars[i] = j;
+	}
+}
