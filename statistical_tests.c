@@ -1,59 +1,172 @@
-#include <malloc.h>
 #include <math.h>
+#include <stdio.h>
+#include <malloc.h>
 
 #include "statistical_tests.h"
-#include "distributions.h"
 
-static int combination(int n, int k)
+#define SQRT3 1.732050807
+
+/*
+	Вычисление факториала числа
+	Вход: value - число, факториал которого надо вычислить
+	Выход: факториал числа value
+*/
+static unsigned int factorial(unsigned int value)
 {
-	if (k >= n) return 1;
+	unsigned int f = 1;
+	for (unsigned int i = 1; i <= value; ++i)
+		f *= i;
+	return f;
+}
+
+/*
+	Проверка Пуассоновской случайной величины по критерию Пирсона
+	Вход:	freq - интервалы частотами
+		count - количество интервалов
+		start - начало 0-го интервала времени
+		interval_size - длина i-го интервала
+		n - количество испытаний
+	Выход:
+		chi_squared - эмпирическое значение частоты по критерию Пирсона
+		k - число степеней свободы
+*/
+void pearson_uniform(unsigned int *freq, unsigned int count, unsigned int start, unsigned int interval_size, int n, double *chi_squared, int *k)
+{
+	// найдём середины интервалов
+	int *x = malloc(count * sizeof(*x));
+	for (int i = 0; i < count; ++i)
+		x[i] = ( (2 * i + 1) * interval_size + 2 * start ) / interval_size;
+
+	printf("x* :");
+	for (int i = 0; i < count; ++i)
+		printf(" %d", x[i]);
+
+	// вычисляем выборочную среднюю
+	double average = 0.0;
+	for (int i = 0; i < count; ++i)
+		average += x[i] * freq[i];
+	average /= n;
+
+	printf("\nAverage : %.4lf\n", average);
+
+	// вычисляем среднеквадратическое отклонение
+	double s = 0.0;
+	for (int i = 0; i < count; ++i)
+		s += (x[i] - average) * (x[i] - average) * freq[i];
+	s /= n;
+	printf("Variance : %.4lf\n", s);
+
+	s = sqrt(s);
+	printf("Standard deviation : %.4lf\n", s);
+
+	free(x);
+
+	// найдём оценки параметров a* и b*
+	double a = average - SQRT3 * s;
+	double b = average + SQRT3 * s;
+
+	printf("a* = %.4lf, b* = %.4lf\n", a, b);
+
+	// найдем плотность предполагаемого распределения
+	double f = 1 / (b - a);
+	printf("Density function : %.4lf\n", f);
+
+	// найдём теоретические частоты
+	double *theor = malloc(count * sizeof(*theor));
 	
-	int denominator = 1; 
-	for (int i = n - k + 1; i <= n; ++i)
-		denominator *= i;
+	theor[0] = n * f * (start + interval_size - a);
+	
+	for (int i = 1; i < count - 1; ++i)
+		theor[i] = n * f * interval_size;
+	
+	theor[count - 1] = n * f * ( b - (interval_size * (count - 1) + start) );
 
-	int numerator = 1;
-	for (int i = 2; i <= k; ++i)
-		numerator *= i;
+	printf("Theoretical observations :");
+	for (int i = 0; i < count; ++i)
+		printf(" %.4lf", theor[i]);
 
-	return denominator / numerator;
+	// вычислим эмпирическое значение хи-квардат критерия
+	double sum = 0.0;
+	for (int i = 0; i < count; ++i)
+		sum += (freq[i] - theor[i]) * (freq[i] - theor[i]) / theor[i];
+
+	free(theor);
+
+	printf("\nchi squared statistic : %.4lf\n", sum);
+	printf("degrees of freedom : %u\n", count - 3);
+
+	*chi_squared = sum;
+	*k = count - 3;
 }
 
 
 /*
-*	Биномиальное распределение
+	Проверка Пуассоновской случайной величины по критерию Пирсона
+	Вход:	freq - частоты
+		count - количество частот
+		n - количество испытаний
+	Выход:
+		chi_squared - эмпирическое значение частоты по критерию Пирсона
+		k - число степеней свободы
 */
+void pearson_poisson(unsigned int *freq, unsigned int count, int n, double *chi_squared, int *k)
+{
+	// вычислим выборочную среднюю
+	double average = 0.0;
+	for (unsigned int i = 0; i < count; ++i)
+		average += freq[i] * i;
+	average /= n;
+	printf("Average : %.4lf\n", average);
 
-//	n - количество опытов
-//	N - число независимых испытаний
-//	p - вероятность появления события
-double calculate_test_statistics_binomial(int n, int N, double p)
-{	
-	if (p < 0.0 || p > 1.0) return 0;
+	// примем за lambda = выборочная средняя
+	// вычислим вероятности по формуле p_i = exp(-lambda) * lambda^i / i!
+	// вычислим теоретические частоты
+	double *theor = malloc(count * sizeof(*theor));
 
-	// частоты (число опытов, в которых наблюдалось count
-	// появлений события) 
-	int *frequency = (int *)malloc((N + 1) * sizeof(int));
-	for (int i = 0; i < n; ++i)
+	printf("Probabilities :");
+	for (unsigned int i = 0; i < count; ++i)
 	{
-		int count = 0;
-		for (int j = 0; j < N; ++j)
-			count += bernoulli(p);
-		frequency[count]++;
+		double p = exp(-average) * pow(average, i) / (double)factorial(i);
+		printf(" %.4lf", p);
+		theor[i] = p;
+	}
+	
+	printf("\nTheoretical observations :");
+	for (unsigned int i = 0; i < count; ++i)
+	{
+		theor[i] *= n;
+		printf(" %.4lf", theor[i]);
 	}
 
-	double *threoretical = (double *)malloc((N + 1) * sizeof(double));
-	for (int i = 0; i <= N; ++i)
+	// объединим малочисленные частоты и соответствующие теоретические
+	int last_index = count - 1;
+	while (last_index > 0 && freq[last_index] < MIN_FREQUENCY_VALUE)
 	{
-		double p = combination(N, i) * pow(p, i) * pow(1 - p, N - i);
-		threoretical[i] = n * p;
+		freq[last_index - 1] += freq[last_index];
+		theor[last_index - 1] += theor[last_index];
+		last_index--;
 	}
+	
+	printf("\nAfter joining\n");
+	printf("\tFrequencies :");
+	for (int i = 0; i <= last_index; ++i)
+		printf(" %u", freq[i]);
+	
+	printf("\n\tTheoretical frequencies :");
+	for (int i = 0; i <= last_index; ++i)
+		printf(" %.4lf", theor[i]);
+	printf("\nlast_index : %d\n", last_index);
 
-	double k = 0;
-	for (int i = 0; i <= N; ++i)
-		k += (frequency[i] - threoretical[i]) * (frequency[i] - threoretical[i]) / threoretical[i];
+	// вычислим эмпирическое значение хи-квардат критерия
+	double sum = 0.0;
+	for (int i = 0; i <= last_index; ++i)
+		sum += (freq[i] - theor[i]) * (freq[i] - theor[i]) / theor[i];
 
-	free(threoretical);
-	free(frequency);
-	return k;
+	free(theor);
+
+	printf("chi squared statistic : %.4lf\n", sum);
+	printf("degrees of freedom : %d\n", last_index - 1);
+
+	*chi_squared = sum;
+	*k = last_index - 1;
 }
