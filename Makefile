@@ -1,7 +1,7 @@
 CC := clang
 CFLAGS := -c -Wall -Wno-deprecated-declarations
 
-.PHONY: all run clean
+.PHONY: all target run clean
 
 FILENAME := main
 BUILDPATH := build
@@ -18,8 +18,13 @@ endif
 SOURCES := $(wildcard *.c)
 OBJECTS := $(SOURCES:.c=.o)
 
-all: $(OBJECTS)
+all:  $(BUILDPATH) target
+
+target: $(OBJECTS)
 	$(CC) $^ -o  $(FILENAME) $(CLIBS)
+
+$(BUILDPATH):
+	mkdir $(BUILDPATH)
 
 run:
 	@$(RUNFILE)
