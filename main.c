@@ -29,7 +29,7 @@ int main(void)
 	for (int i = 0; i < N; ++i)
 	{
 		int truncated = (int)rand_vars[i];
-		truncated -= (truncated % INTERVAL_SIZE == 1);
+		truncated -= truncated % INTERVAL_SIZE;
 		truncated /= INTERVAL_SIZE;
 		intervals[truncated - 1]++;
 	}
